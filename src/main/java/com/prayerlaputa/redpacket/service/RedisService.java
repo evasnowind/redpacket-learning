@@ -1,15 +1,19 @@
 package com.prayerlaputa.redpacket.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -362,5 +366,25 @@ public class RedisService {
         ZSetOperations<String, Object> zset = redisTemplate.opsForZSet();
         Set<ZSetOperations.TypedTuple<Object>> ret = zset.reverseRangeWithScores(key, start, end);
         return ret;
+    }
+
+    public Boolean bloomFilterAdd(String name, int value) {
+        DefaultRedisScript<Boolean> bloomAdd = new DefaultRedisScript<>();
+        bloomAdd.setScriptSource(new ResourceScriptSource(new ClassPathResource("bloomFilterAdd.lua")));
+        bloomAdd.setResultType(Boolean.class);
+        List<Object> keyList = new ArrayList<>();
+        keyList.add(name);
+        keyList.add(value + "");
+        return (Boolean)redisTemplate.execute(bloomAdd, keyList);
+    }
+
+    public Boolean bloomFilterExists(String name, int value) {
+        DefaultRedisScript<Boolean> bloomExists = new DefaultRedisScript<>();
+        bloomExists.setScriptSource(new ResourceScriptSource(new ClassPathResource("bloomFilterExists.lua")));
+        bloomExists.setResultType(Boolean.class);
+        List<Object> keyList = new ArrayList<>();
+        keyList.add(name);
+        keyList.add(value + "");
+        return (Boolean)redisTemplate.execute(bloomExists, keyList);
     }
 }
